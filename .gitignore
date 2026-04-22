@@ -1,5 +1,10 @@
-# 原始醫療資料（.mat 檔案體積大且含病人資訊）
-PlaTiF Dataset/
+# 原始醫療資料（.mat 檔案體積大，排除）
+"PlaTiF Dataset/Patient Data_Part 1/"
+"PlaTiF Dataset/Patient Data_Part 2/"
+"PlaTiF Dataset/Patient Data_Part 3/"
+"PlaTiF Dataset/Patient Data_Part 4/"
+"PlaTiF Dataset/Patient Data_Part 5/"
+*.zip
 
 # yolo_dataset 已加入版本控制
 
