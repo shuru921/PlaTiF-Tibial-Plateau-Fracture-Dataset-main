@@ -1,0 +1,10 @@
+# 訓練與驗證路徑 (請根據你實際的資料夾位置修改)
+train: ./yolo_dataset/images/train
+val: ./yolo_dataset/images/val
+test: ./yolo_dataset/images/test
+
+# 類別數量
+nc: 1
+
+# 類別名稱 (目前標註檔開頭為 0，對應 Fracture)
+names: ['Fracture']
