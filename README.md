@@ -269,6 +269,19 @@ Schatzker Classification System:
 
 ## 專題實作紀錄
 
+### 注意事項
+
+> **原始 `.mat` 資料檔未包含在此 repo 中**（檔案過大）。
+> 若要重新執行前處理，請先至 Zenodo 下載原始資料集：
+> [https://doi.org/10.5281/zenodo.18007397](https://doi.org/10.5281/zenodo.18007397)
+>
+> 下載後將各 Part 資料夾放置於 `PlaTiF Dataset/` 底下，再執行：
+> ```bash
+> python preprocess_for_yolo.py
+> ```
+
+---
+
 ### 資料集概況
 
 - 總病人數：186 人（Part 1~5）
