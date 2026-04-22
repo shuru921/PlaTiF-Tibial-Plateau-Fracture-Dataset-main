@@ -1,8 +1,7 @@
 # 原始醫療資料（.mat 檔案體積大且含病人資訊）
 PlaTiF Dataset/
 
-# YOLO 產生的影像與標註（可由前處理腳本重新產生）
-yolo_dataset/
+# yolo_dataset 已加入版本控制
 
 # macOS
 .DS_Store
