@@ -348,13 +348,28 @@ python preprocess_for_yolo.py
   ```
 - Normal 案例（label 7）：寫空的 `.txt`，代表無骨折框
 
-**3. 資料切分**
-- 打亂後依 80/10/10 分配到 `train/`、`val/`、`test/`
-- 切分比例可在腳本頂部調整：
-  ```python
-  TRAIN_RATIO = 0.8
-  VAL_RATIO   = 0.1
-  ```
+**3. 資料切分（Stratified Split，以病人為單位）**
+
+切分單位是**病人**，同一個病人的所有影像（im0, im1...）一定在同一個 split，避免資料洩漏（Data Leakage）。
+
+同時採用**分層切分（Stratified Split）**，對每個 Schatzker 類別各自做 80/10/10，確保 Type 3、4、5 等數量少的類別在 val 和 test 中至少各有 1 位病人。
+
+| 類別 | 總人數 | train | val | test |
+|------|--------|-------|-----|------|
+| Normal | 58 | 46 | 5 | 7 |
+| Type 1 | 26 | 20 | 2 | 4 |
+| Type 2 | 34 | 27 | 3 | 4 |
+| Type 3 | 12 | 9 | 1 | 2 |
+| Type 4 | 10 | 8 | 1 | 1 |
+| Type 5 | 13 | 10 | 1 | 2 |
+| Type 6 | 33 | 26 | 3 | 4 |
+| **合計** | **186** | **146** | **16** | **24** |
+
+切分比例可在腳本頂部調整：
+```python
+TRAIN_RATIO = 0.8
+VAL_RATIO   = 0.1
+```
 
 ---
 
