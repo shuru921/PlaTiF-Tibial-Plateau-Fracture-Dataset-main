@@ -1,10 +1,10 @@
-# 訓練與驗證路徑 (請根據你實際的資料夾位置修改)
-train: ./yolo_dataset/images/train
-val: ./yolo_dataset/images/val
-test: ./yolo_dataset/images/test
+# YOLO Segmentation 設定檔
+train: ./yolo_seg_dataset/images/train
+val:   ./yolo_seg_dataset/images/val
+test:  ./yolo_seg_dataset/images/test
 
 # 類別數量
 nc: 1
 
-# 類別名稱 (目前標註檔開頭為 0，對應 Fracture)
+# 類別名稱（label 1~6 統一歸為 Fracture，label 7 = Normal 以空白 txt 表示）
 names: ['Fracture']

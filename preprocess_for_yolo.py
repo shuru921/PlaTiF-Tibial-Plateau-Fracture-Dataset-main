@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 # --- 路徑設定 ---
 base_path = "./PlaTiF Dataset"
-output_path = "yolo_dataset"
+output_path = "yolo_seg_dataset"   # YOLO Segmentation 格式資料集
 
 # label=7 代表 Normal（無骨折），1~6 為 Schatzker 骨折分型
 NORMAL_LABEL = 7
@@ -21,6 +21,9 @@ VAL_RATIO   = 0.1
 
 RANDOM_SEED = 42
 
+# 多邊形簡化精度（越小越精細，點越多；越大越粗略，點越少）
+POLYGON_EPSILON = 2.0
+
 
 def normalize_image(img):
     img_float = img.astype(np.float32)
@@ -30,17 +33,33 @@ def normalize_image(img):
     return clahe.apply(img_8u)
 
 
-def mask_to_yolo_bbox(mask, img_h, img_w):
-    y_indices, x_indices = np.where(mask > 0)
-    if len(x_indices) == 0:
+def mask_to_yolo_polygon(mask, img_h, img_w):
+    """
+    將 binary mask 轉換為 YOLO Segmentation 格式的正規化多邊形座標。
+    格式：x1 y1 x2 y2 x3 y3 ...（每個值介於 0~1）
+    """
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
         return None
-    x_min, x_max = x_indices.min(), x_indices.max()
-    y_min, y_max = y_indices.min(), y_indices.max()
-    x_center = (x_min + x_max) / 2.0 / img_w
-    y_center = (y_min + y_max) / 2.0 / img_h
-    w = (x_max - x_min) / img_w
-    h = (y_max - y_min) / img_h
-    return x_center, y_center, w, h
+
+    # 取最大輪廓（主要脛骨區域）
+    largest = max(contours, key=cv2.contourArea)
+
+    # 簡化多邊形，減少頂點數量（避免 label 過長）
+    epsilon = POLYGON_EPSILON
+    simplified = cv2.approxPolyDP(largest, epsilon, closed=True)
+
+    # 正規化座標
+    points = simplified.reshape(-1, 2)
+    norm_points = []
+    for x, y in points:
+        norm_points.append(round(x / img_w, 6))
+        norm_points.append(round(y / img_h, 6))
+
+    if len(norm_points) < 6:  # 多邊形至少需要 3 個點
+        return None
+
+    return norm_points
 
 
 def collect_patients_by_label():
@@ -65,7 +84,6 @@ def collect_patients_by_label():
             try:
                 mat_data = scipy.io.loadmat(os.path.join(part_path, f))
                 patient_data = mat_data[pid]
-                # 取第一張影像的 label 代表該病人的類別
                 first_im = [k for k in patient_data.dtype.names if k.startswith("im")][0]
                 label = int(patient_data[0, 0][first_im][0, 0]["label"][0, 0])
                 groups[label].append((pid, part_path))
@@ -97,7 +115,6 @@ def stratified_split(groups):
         n = len(patients)
         n_train = int(n * TRAIN_RATIO)
         n_val   = int(n * VAL_RATIO)
-        # 確保 val 和 test 至少各有 1 人（當總數 >= 3 時）
         if n >= 3:
             n_val  = max(1, n_val)
             n_test = max(1, n - n_train - n_val)
@@ -141,14 +158,18 @@ def process_patient(pid, part_path, split):
             cv2.imwrite(os.path.join(img_dir, f"{filename}.jpg"), img_final)
 
             label_path = os.path.join(lbl_dir, f"{filename}.txt")
+
             if label == NORMAL_LABEL:
+                # 正常影像：空白 label（無骨折，無輪廓）
                 open(label_path, "w").close()
             else:
-                bbox = mask_to_yolo_bbox(mask, img_h, img_w)
+                # 骨折影像：將脛骨 BW mask 轉為 YOLO Segmentation 多邊形
+                polygon = mask_to_yolo_polygon(mask, img_h, img_w)
                 with open(label_path, "w") as f:
-                    if bbox:
-                        x_c, y_c, w, h = bbox
-                        f.write(f"{YOLO_CLASS_ID} {x_c:.6f} {y_c:.6f} {w:.6f} {h:.6f}\n")
+                    if polygon:
+                        coords = " ".join(map(str, polygon))
+                        f.write(f"{YOLO_CLASS_ID} {coords}\n")
+
         except Exception as e:
             print(f"  Error {pid} {im_key}: {e}")
 
@@ -174,4 +195,4 @@ for split in ["train", "val", "test"]:
     n = len(os.listdir(os.path.join(output_path, "images", split)))
     print(f"{split}：{n} 張影像")
 
-print("\n完成！每個 split 都保有各類別的比例。")
+print("\n完成！YOLO Segmentation 資料集已產生於", output_path)

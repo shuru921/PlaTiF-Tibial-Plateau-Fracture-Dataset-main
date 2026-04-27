@@ -275,9 +275,10 @@ Schatzker Classification System:
 > 若要重新執行前處理，請先至 Zenodo 下載原始資料集：
 > [https://doi.org/10.5281/zenodo.18007397](https://doi.org/10.5281/zenodo.18007397)
 >
-> 下載後將各 Part 資料夾放置於 `PlaTiF Dataset/` 底下，再執行：
+> 下載後將各 Part 資料夾放置於 `PlaTiF Dataset/` 底下，依序執行：
 > ```bash
-> python preprocess_for_yolo.py
+> python preprocess_for_yolo.py   # 產生 Stage 1 資料集
+> python prepare_stage2.py        # 產生 Stage 2 資料集
 > ```
 
 ---
@@ -286,17 +287,17 @@ Schatzker Classification System:
 
 - 總病人數：186 人（Part 1~5）
 - 類別分布：Normal（無骨折）58 人、骨折（Schatzker Type 1~6）128 人
-- 每個病人有 1~8 張影像（im0, im1, im2...），共 421 張
+- 每個病人有 1~N 張影像（im0, im1, im2...），共 421 張
 
-| Schatzker 分類 | 數量 |
-|---------------|------|
-| Normal        | 58   |
-| Type 2        | 34   |
-| Type 6        | 32   |
-| Type 1        | 27   |
-| Type 3        | 12   |
-| Type 5        | 12   |
-| Type 4        | 11   |
+| Schatzker 分類 | 病人數 | 影像數 |
+|---------------|--------|--------|
+| Normal        | 58     | 139    |
+| Type 1        | 26     | 65     |
+| Type 2        | 34     | 70     |
+| Type 3        | 12     | 26     |
+| Type 4        | 10     | 17     |
+| Type 5        | 13     | 22     |
+| Type 6        | 33     | 82     |
 
 > `.mat` 檔中 label=7 代表 Normal，label=1~6 對應 Schatzker 分型
 
@@ -307,86 +308,70 @@ Schatzker Classification System:
 ```
 PlaTiF-Tibial-Plateau-Fracture-Dataset-main/
 ├── PlaTiF Dataset/          # 原始 .mat 資料（Part 1~5，186 個病人）
-├── yolo_dataset/            # 前處理後的 YOLO 資料集
-│   ├── images/
-│   │   ├── train/           # 336 張（80%）
-│   │   ├── val/             # 42 張（10%）
-│   │   └── test/            # 43 張（10%）
-│   └── labels/
-│       ├── train/           # 對應標註 .txt
-│       ├── val/
-│       └── test/
-├── data.yaml                # YOLO 設定檔（路徑、類別數）
-├── preprocess_for_yolo.py   # 前處理主程式
-├── split_dataset.py         # 舊版切分腳本（已整合進前處理，不需使用）
+├── yolo_seg_dataset/        # Stage 1 資料集（YOLO Segmentation）
+│   ├── images/train|val|test/
+│   └── labels/train|val|test/
+├── stage2_dataset/          # Stage 2 資料集（精細二元判斷）
+│   ├── train/fracture|normal/
+│   ├── val/fracture|normal/
+│   └── test/fracture|normal/
+├── data.yaml                # YOLO 設定檔
+├── preprocess_for_yolo.py   # Stage 1 前處理腳本
+├── prepare_stage2.py        # Stage 2 前處理腳本
 ├── Read_Data_PythonCode.py  # 原始資料視覺化（Python）
 ├── Read_Data_MatlabCode.m   # 原始資料視覺化（MATLAB）
-└── validation.py            # 驗證腳本
+├── PROJECT_ARCHITECTURE.md  # 完整系統架構文件
+└── requirements.txt         # 套件依賴清單
 ```
 
 ---
 
-### 前處理說明（preprocess_for_yolo.py）
+### 前處理說明
 
-執行方式：
+#### Stage 1（`preprocess_for_yolo.py`）
+
+從 `.mat` 讀取 `OriginalImage`，經 Min-Max 正規化與 CLAHE 對比增強後，將脛骨 `BW` mask 的輪廓頂點轉換為 **YOLO Segmentation 多邊形格式**。正常影像（label=7）產生空白 `.txt` 作為負樣本。
+
+**資料切分：以病人為單位，分層抽樣（80/10/10），固定 seed=42**
+
+| Split | 影像數（有骨折） | 影像數（正常） | 總計 |
+|-------|----------------|--------------|------|
+| train | 223 | 113 | 336 |
+| val   | 24  | 13  | 37  |
+| test  | 30  | 18  | 48  |
+
+**訓練指令：**
 ```bash
-python preprocess_for_yolo.py
+yolo segment train data=data.yaml model=yolov8n-seg.pt epochs=100 imgsz=640
 ```
 
-前處理做了以下三件事：
+#### Stage 2（`prepare_stage2.py`）
 
-**1. 影像轉換（.mat → .jpg）**
-- 從 `.mat` 讀取 `OriginalImage`
-- 正規化（將原始像素值拉伸到 0~255）
-- CLAHE 對比度增強（讓 X 光細節更清晰）
-- 存成 `.jpg`
-
-**2. 產生 YOLO 標註（.txt）**
-- 骨折案例（label 1~6）：從 `BW` 遮罩計算最小外接矩形，轉成 YOLO 格式
-  ```
-  class_id  x_center  y_center  width  height   （皆為歸一化值 0~1）
-  ```
-- Normal 案例（label 7）：寫空的 `.txt`，代表無骨折框
-
-**3. 資料切分（Stratified Split，以病人為單位）**
-
-切分單位是**病人**，同一個病人的所有影像（im0, im1...）一定在同一個 split，避免資料洩漏（Data Leakage）。
-
-同時採用**分層切分（Stratified Split）**，對每個 Schatzker 類別各自做 80/10/10，確保 Type 3、4、5 等數量少的類別在 val 和 test 中至少各有 1 位病人。
-
-| 類別 | 總人數 | train | val | test |
-|------|--------|-------|-----|------|
-| Normal | 58 | 46 | 5 | 7 |
-| Type 1 | 26 | 20 | 2 | 4 |
-| Type 2 | 34 | 27 | 3 | 4 |
-| Type 3 | 12 | 9 | 1 | 2 |
-| Type 4 | 10 | 8 | 1 | 1 |
-| Type 5 | 13 | 10 | 1 | 2 |
-| Type 6 | 33 | 26 | 3 | 4 |
-| **合計** | **186** | **146** | **16** | **24** |
-
-切分比例可在腳本頂部調整：
-```python
-TRAIN_RATIO = 0.8
-VAL_RATIO   = 0.1
-```
+與 Stage 1 使用相同病人切分，從 `.mat` 讀取 `maskedImage`（去背景純脛骨影像），經 CLAHE 增強與黑邊裁切後，依 label 存放至 `fracture/` 或 `normal/` 資料夾。
 
 ---
 
-### 專題方向
+### 系統架構
 
-採用 **YOLO 物件偵測**，目標是給定一張脛骨 X 光，自動框出骨折位置並附上信心分數：
+本專案採兩階段 AI 輔助診斷架構，目標是幫助急診醫師判斷是否有骨折：
 
 ```
-輸入：脛骨 X 光影像
+輸入：X 光影像
   ↓
-[YOLO] → 框出骨折位置 + 信心分數
+[Stage 1] YOLO Segmentation
+  → 有無骨折 + 脛骨輪廓 Mask + 信心分數
   ↓
-[分型 CNN] → 判斷 Schatzker Type 1~6（後續）
+信心分數高（> 0.7）→ 直接輸出結果
+信心分數低（困難案例）
+  → 用 Mask 去背得到純脛骨影像 → [Stage 2]
+  ↓
+[Stage 2] ResNet / EfficientNet 精細二元判斷
+  → 輸入：純脛骨影像（去除背景干擾）
+  → 輸出：有骨折 / 無骨折（更精確）
 ```
 
-- YOLO 類別：1 類（Fracture）
-- Normal 案例以空標註處理（無框 = 無骨折）
+> 本系統只做有無骨折的判斷，不做 Schatzker 分型（分型為骨科醫師職責）。
+> 詳細架構請參考 `PROJECT_ARCHITECTURE.md`。
 
 ---
 
