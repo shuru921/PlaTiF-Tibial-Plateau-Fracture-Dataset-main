@@ -370,16 +370,32 @@ python visualize_labels.py --split all --all  # 全部輸出
 
 #### 發現的標注錯誤（來源：原始 `.mat` 檔案本身）
 
-掃描全部 421 張影像後，發現 **2 張** 的 `BW` mask 尺寸與 `OriginalImage` 不吻合，確認是原始資料集的標注問題（`im1` 的 BW 被錯誤地沿用了 `im0` 的 mask）：
+掃描全部 421 張影像後，發現 **2 張** 的 `BW` mask 尺寸與 `OriginalImage` 不吻合，確認是原始資料集的標注問題（`im1` 的 `BW` 與 `maskedImage` 被錯誤地沿用了 `im0` 的資料）：
 
-| 影像 | Split | im1 img shape | BW shape（錯誤） | 問題描述 |
-|------|-------|--------------|----------------|---------|
-| Patient_ID_047_im1 | train | (2517, 1356) | (2857, 1285) | im1 BW 為 im0 的脛骨全景 mask，im1 實為膝關節正面圖 |
-| Patient_ID_081_im1 | val   | (2819, 1290) | (2819, 1398) | im1 BW 為 im0 的膝關節 mask，im1 實為術後脛骨全景圖（含內固定鋼板） |
+| 影像 | Split | OriginalImage shape | BW / maskedImage shape（錯誤） | 問題描述 |
+|------|-------|--------------------|-----------------------------|---------|
+| Patient_ID_047_im1 | train | (2517, 1356) | (2857, 1285) | im1 為膝關節正面圖，但 BW/maskedImage 是 im0 的脛骨全景 mask |
+| Patient_ID_081_im1 | val   | (2819, 1290) | (2819, 1398) | im1 為術後脛骨全景（含內固定鋼板），但 BW/maskedImage 是 im0 的膝關節 mask |
 
-**處理方式：** 將上述兩個 label `.txt` 清空（視為無標注影像），原始錯誤內容備份為 `.txt.bak`。此兩張影像圖片本身保留，不刪除。
+下圖為對比：左側為 im1 的**正確原圖**（OriginalImage），右側為 `.mat` 中錯誤儲存的 **maskedImage**（實為 im0 的去背結果，與 im1 解剖位置完全不符）。
 
-> 修正後有效骨折標注：train 222 張、val 23 張、test 30 張
+**Patient_ID_047_im1**
+
+![label_error_047](docs/images/label_error_047_im1.jpg)
+
+**Patient_ID_081_im1**
+
+![label_error_081](docs/images/label_error_081_im1.jpg)
+
+**處理方式：**
+
+| 資料集 | 處置 |
+|--------|------|
+| `yolo_seg_dataset` | label `.txt` 清空（視為無標注影像），原始錯誤內容備份為 `.txt.bak`，圖片保留 |
+| `stage2_dataset` | 錯誤的 maskedImage 移至 `stage2_dataset/_removed/`，不參與訓練 |
+
+> 修正後有效骨折標注 — yolo_seg_dataset：train 222 張、val 23 張、test 30 張
+> stage2_dataset（fracture）：train 222 張、val 23 張、test 30 張
 
 ---
 
