@@ -377,13 +377,25 @@ python visualize_labels.py --split all --all  # 全部輸出
 | Patient_ID_047_im1 | train | (2517, 1356) | (2857, 1285) | im1 為膝關節正面圖，但 BW/maskedImage 是 im0 的脛骨全景 mask |
 | Patient_ID_081_im1 | val   | (2819, 1290) | (2819, 1398) | im1 為術後脛骨全景（含內固定鋼板），但 BW/maskedImage 是 im0 的膝關節 mask |
 
-下圖為對比：左側為 im1 的**正確原圖**（OriginalImage），右側為 `.mat` 中錯誤儲存的 **maskedImage**（實為 im0 的去背結果，與 im1 解剖位置完全不符）。
+下圖格式說明：左側為 **OriginalImage**（原始 X 光），右側為 `.mat` 中的 **maskedImage**（去背後的純脛骨影像）。正確情況下兩者解剖位置應完全對應。
 
-**Patient_ID_047_im1**
+**正確範例（Patient_ID_008_im0，供對照）**
+
+> 右側 maskedImage 精準保留脛骨平台區域，與左側原圖解剖位置吻合。
+
+![label_correct_008](docs/images/label_correct_008_im0.jpg)
+
+---
+
+**錯誤案例 1：Patient_ID_047_im1**
+
+> 左側 im1 為膝關節正面 X 光，右側 maskedImage 卻是 im0（脛骨全景）的去背結果，兩者為完全不同的解剖視角。
 
 ![label_error_047](docs/images/label_error_047_im1.jpg)
 
-**Patient_ID_081_im1**
+**錯誤案例 2：Patient_ID_081_im1**
+
+> 左側 im1 為術後脛骨全景（含內固定鋼板），右側 maskedImage 卻是 im0（膝關節）的去背結果，解剖位置不符。
 
 ![label_error_081](docs/images/label_error_081_im1.jpg)
 
