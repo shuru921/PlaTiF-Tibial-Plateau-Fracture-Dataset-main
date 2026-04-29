@@ -47,11 +47,11 @@
 
 | Split | 病人數 | 影像數（有骨折） | 影像數（正常） | 總計 |
 |-------|--------|----------------|--------------|------|
-| Train | ~149 | 222 | 114 | 336 |
-| Val | ~18 | 23 | 14 | 37 |
+| Train | ~149 | 222 | 113 | 335 |
+| Val | ~18 | 23 | 13 | 36 |
 | Test | ~19 | 30 | 18 | 48 |
 
-> train/val 各有 1 張骨折影像因原始 `.mat` BW mask 錯誤已移除標注（Patient_ID_047_im1、Patient_ID_081_im1）
+> train/val 各有 1 張骨折影像（Patient_ID_047_im1、Patient_ID_081_im1）因原始 `.mat` BW mask 錯誤，已從資料集完全移除至 `_removed/`（詳見資料品質問題紀錄）
 
 ---
 
@@ -205,6 +205,8 @@ PlaTiF-Tibial-Plateau-Fracture-Dataset-main/
 │   ├── val/fracture|normal/
 │   └── test/fracture|normal/
 ├── data.yaml                    # YOLO 設定檔
+├── yolo_seg_dataset/_removed/   # 移除的錯誤影像（不參與訓練）
+├── stage2_dataset/_removed/     # 移除的錯誤影像（不參與訓練）
 ├── preprocess_for_yolo.py       # Stage 1 前處理腳本
 ├── prepare_stage2.py            # Stage 2 前處理腳本
 ├── visualize_labels.py          # Label 視覺化驗證腳本（輸出至 vis_output/）
