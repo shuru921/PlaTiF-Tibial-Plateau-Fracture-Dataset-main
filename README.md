@@ -337,11 +337,11 @@ PlaTiF-Tibial-Plateau-Fracture-Dataset-main/
 
 | Split | 影像數（有骨折） | 影像數（正常） | 總計 |
 |-------|----------------|--------------|------|
-| train | 222 | 114 | 336 |
-| val   | 23  | 14  | 37  |
+| train | 222 | 113 | 335 |
+| val   | 23  | 13  | 36  |
 | test  | 30  | 18  | 48  |
 
-> 原始骨折標注各為 train 223、val 24，其中各 1 張因原始 `.mat` BW mask 錯誤已清空（詳見下方「資料品質問題紀錄」）
+> 原始各為 train 336、val 37，其中各 1 張骨折影像因原始 `.mat` BW mask 錯誤已移除（詳見下方「資料品質問題紀錄」）
 
 **訓練指令：**
 ```bash
@@ -401,13 +401,15 @@ python visualize_labels.py --split all --all  # 全部輸出
 
 **處理方式：**
 
+兩張影像的圖片與 label 一律移至各資料集的 `_removed/` 資料夾，不參與訓練與驗證。
+保留圖片於 `_removed/` 而非直接刪除，以便日後追蹤。
+
 | 資料集 | 處置 |
 |--------|------|
-| `yolo_seg_dataset` | label `.txt` 清空（視為無標注影像），原始錯誤內容備份為 `.txt.bak`，圖片保留 |
-| `stage2_dataset` | 錯誤的 maskedImage 移至 `stage2_dataset/_removed/`，不參與訓練 |
+| `yolo_seg_dataset` | 圖片與 label 移至 `yolo_seg_dataset/_removed/`（骨折圖被當成負樣本會產生錯誤訓練訊號） |
+| `stage2_dataset` | 錯誤的 maskedImage 移至 `stage2_dataset/_removed/` |
 
-> 修正後有效骨折標注 — yolo_seg_dataset：train 222 張、val 23 張、test 30 張
-> stage2_dataset（fracture）：train 222 張、val 23 張、test 30 張
+> 修正後有效骨折數量 — train：222 張、val：23 張、test：30 張（yolo_seg_dataset 與 stage2_dataset 相同）
 
 ---
 
