@@ -47,9 +47,11 @@
 
 | Split | 病人數 | 影像數（有骨折） | 影像數（正常） | 總計 |
 |-------|--------|----------------|--------------|------|
-| Train | ~149 | 223 | 113 | 336 |
-| Val | ~18 | 24 | 13 | 37 |
+| Train | ~149 | 222 | 114 | 336 |
+| Val | ~18 | 23 | 14 | 37 |
 | Test | ~19 | 30 | 18 | 48 |
+
+> train/val 各有 1 張骨折影像因原始 `.mat` BW mask 錯誤已移除標注（Patient_ID_047_im1、Patient_ID_081_im1）
 
 ---
 
@@ -205,6 +207,7 @@ PlaTiF-Tibial-Plateau-Fracture-Dataset-main/
 ├── data.yaml                    # YOLO 設定檔
 ├── preprocess_for_yolo.py       # Stage 1 前處理腳本
 ├── prepare_stage2.py            # Stage 2 前處理腳本
+├── visualize_labels.py          # Label 視覺化驗證腳本（輸出至 vis_output/）
 ├── Read_Data_PythonCode.py      # 原始資料視覺化
 ├── Read_Data_MatlabCode.m       # 原始資料視覺化（MATLAB）
 └── PROJECT_ARCHITECTURE.md      # 本文件
@@ -228,6 +231,7 @@ PlaTiF-Tibial-Plateau-Fracture-Dataset-main/
 
 - [x] Stage 1 資料集前處理完成（`yolo_seg_dataset/`）
 - [x] Stage 2 資料集前處理完成（`stage2_dataset/`）
+- [x] Label 品質驗證完成（全 421 張掃描，修正 2 張原始 .mat BW 錯誤）
 - [ ] Stage 1 YOLO Segmentation 訓練完成，baseline 結果確認
 - [ ] 困難案例分析（哪些 Schatzker Type 較難偵測）
 - [ ] Stage 2 分類模型訓練完成

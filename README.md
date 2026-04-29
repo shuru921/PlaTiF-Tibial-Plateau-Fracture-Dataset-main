@@ -318,6 +318,7 @@ PlaTiF-Tibial-Plateau-Fracture-Dataset-main/
 ├── data.yaml                # YOLO 設定檔
 ├── preprocess_for_yolo.py   # Stage 1 前處理腳本
 ├── prepare_stage2.py        # Stage 2 前處理腳本
+├── visualize_labels.py      # Label 視覺化驗證腳本（輸出至 vis_output/）
 ├── Read_Data_PythonCode.py  # 原始資料視覺化（Python）
 ├── Read_Data_MatlabCode.m   # 原始資料視覺化（MATLAB）
 ├── PROJECT_ARCHITECTURE.md  # 完整系統架構文件
@@ -336,9 +337,11 @@ PlaTiF-Tibial-Plateau-Fracture-Dataset-main/
 
 | Split | 影像數（有骨折） | 影像數（正常） | 總計 |
 |-------|----------------|--------------|------|
-| train | 223 | 113 | 336 |
-| val   | 24  | 13  | 37  |
+| train | 222 | 114 | 336 |
+| val   | 23  | 14  | 37  |
 | test  | 30  | 18  | 48  |
+
+> 原始骨折標注各為 train 223、val 24，其中各 1 張因原始 `.mat` BW mask 錯誤已清空（詳見下方「資料品質問題紀錄」）
 
 **訓練指令：**
 ```bash
@@ -348,6 +351,35 @@ yolo segment train data=data.yaml model=yolov8n-seg.pt epochs=100 imgsz=640
 #### Stage 2（`prepare_stage2.py`）
 
 與 Stage 1 使用相同病人切分，從 `.mat` 讀取 `maskedImage`（去背景純脛骨影像），經 CLAHE 增強與黑邊裁切後，依 label 存放至 `fracture/` 或 `normal/` 資料夾。
+
+---
+
+### 資料品質問題紀錄
+
+#### 掃描工具
+
+新增 `visualize_labels.py`，可將 YOLO Segmentation 的 polygon mask 疊加在原圖上輸出，用於目視確認標注正確性。
+
+```bash
+python visualize_labels.py              # train split，前 50 張
+python visualize_labels.py --split val  # val split
+python visualize_labels.py --split all --all  # 全部輸出
+```
+
+結果輸出至 `vis_output/` 資料夾。
+
+#### 發現的標注錯誤（來源：原始 `.mat` 檔案本身）
+
+掃描全部 421 張影像後，發現 **2 張** 的 `BW` mask 尺寸與 `OriginalImage` 不吻合，確認是原始資料集的標注問題（`im1` 的 BW 被錯誤地沿用了 `im0` 的 mask）：
+
+| 影像 | Split | im1 img shape | BW shape（錯誤） | 問題描述 |
+|------|-------|--------------|----------------|---------|
+| Patient_ID_047_im1 | train | (2517, 1356) | (2857, 1285) | im1 BW 為 im0 的脛骨全景 mask，im1 實為膝關節正面圖 |
+| Patient_ID_081_im1 | val   | (2819, 1290) | (2819, 1398) | im1 BW 為 im0 的膝關節 mask，im1 實為術後脛骨全景圖（含內固定鋼板） |
+
+**處理方式：** 將上述兩個 label `.txt` 清空（視為無標注影像），原始錯誤內容備份為 `.txt.bak`。此兩張影像圖片本身保留，不刪除。
+
+> 修正後有效骨折標注：train 222 張、val 23 張、test 30 張
 
 ---
 
